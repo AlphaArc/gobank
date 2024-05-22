@@ -44,6 +44,7 @@ func (s *APIServer) Run() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/account",makeHTTPHandleFunc(s.handleAccount))
+	router.HandleFunc("/account/{id}",makeHTTPHandleFunc(s.handleAccountByID))
 
 	log.Println("JSON API Server running on port: ",s.listenAdr)
 
@@ -52,7 +53,17 @@ func (s *APIServer) Run() {
 
 func (s *APIServer) handleAccount(w http.ResponseWriter,r  *http.Request) error {
 	switch r.Method{
-		case "GET" :  return s.handleGetAccount(w,r)
+		case "GET" :  return s.handleGetAllAccount(w,r)
+		case "POST" :  return s.handleCreateAccount(w,r)
+		// case "DELETE" :  return s.handleDeleteAccount(w,r)
+	} 
+
+	return fmt.Errorf("method not allowed %s",r.Method)
+}
+
+func (s *APIServer) handleAccountByID(w http.ResponseWriter,r  *http.Request) error {
+	switch r.Method{
+		case "GET" :  return s.handleGetAccountByID(w,r)
 		case "POST" :  return s.handleCreateAccount(w,r)
 		case "DELETE" :  return s.handleDeleteAccount(w,r)
 	} 
@@ -60,10 +71,12 @@ func (s *APIServer) handleAccount(w http.ResponseWriter,r  *http.Request) error 
 	return fmt.Errorf("method not allowed %s",r.Method)
 }
 
-func (s *APIServer) handleGetAccount(w http.ResponseWriter,r  *http.Request) error {
-	id := mux.Vars(r)["id"]
-	fmt.Println(id)
-	return WriteJSON(w,http.StatusOK,&Account{})
+func (s *APIServer) handleGetAllAccount(w http.ResponseWriter,r  *http.Request) error {
+	fmt.Println(r.Method+" Need Auth")
+	accounts,  err := s.store.GetAllAccounts();if err!=nil{
+		return nil
+	}
+	return WriteJSON(w,http.StatusOK,accounts)
 }
 
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter,r  *http.Request) error {
@@ -79,10 +92,25 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter,r  *http.Request) 
 	return WriteJSON(w,http.StatusOK,account)
 }
 
-func (s *APIServer) handleDeleteAccount(w http.ResponseWriter,r  *http.Request) error {
-	return nil
+func (s *APIServer) handleGetAccountByID(w  http.ResponseWriter,r *http.Request) error{
+	// var id string = mux.Vars(r)["id"]
+	// account,err :=  s.store.GetAccountByID(int(id))
+	// if err!=nil{
+	// 	return err
+	// }
+	fmt.Println(r.Body)
+	acc := `"AVC":"123"`
+	return WriteJSON(w,http.StatusOK,acc)
 }
 
-func (s *APIServer) handleTransfer(w http.ResponseWriter,r  *http.Request) error {
-	return nil
+func (s *APIServer) handleDeleteAccount(w http.ResponseWriter,r  *http.Request) error {
+	fmt.Println(r.Body)
+	acc := `"AVC":"123"`
+	return WriteJSON(w,http.StatusOK,acc)
 }
+
+// func (s *APIServer) handleTransfer(w http.ResponseWriter,r  *http.Request) error {
+// 	fmt.Println(r.Body)
+// 	acc := `"AVC":"123"`
+// 	return WriteJSON(w,http.StatusOK,acc)
+// }

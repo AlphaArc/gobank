@@ -105,25 +105,38 @@ func (s *PostgresStore) GetAccountByID(int) (*Account, error) {
 }
 
 func (s *PostgresStore) GetAllAccounts()([]*Account,error){
-	rows, err := s.db.Query("select * from account")
-	if err != nil{
+	rows, err := s.db.Query(`SELECT 
+	id, 
+	first_name, 
+	last_name, 
+	"number", 
+	balance, 
+	created_at
+	FROM account`);if err != nil{
 		return nil, err
 	}
+	defer rows.Close()
 	accounts := []*Account{}
 	for rows.Next(){
 		account := new(Account)
 		err := rows.Scan(
+			&account.ID,
 			&account.FirstName,
 			&account.LastName,
 			&account.Number,
 			&account.Balance,
 			&account.CreatedAt,
 		)
-		if err  !=  nil {
-			return nil, err
-		}
-
-		accounts = append(accounts, account)
+		if err != nil {
+            // fmt.Printf("Error scanning row: %v\n", err)
+            return nil, fmt.Errorf("scan error: %v", err)
+        }
+		// fmt.Printf("Scanned Account: %+v\n", account)
+        accounts = append(accounts, account)
 	}
+	if err = rows.Err(); err != nil {
+		// fmt.Printf("Error during row iteration: %v\n", err)
+		return nil, fmt.Errorf("rows iteration error: %v", err)
+    }
 	return accounts, nil
 }
