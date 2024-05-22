@@ -8,10 +8,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func WriteJSON(w http.ResponseWriter,status int,v any)error{
+func WriteJSON(w http.ResponseWriter,status int,toJSON any)error{
 	w.Header().Add("Content-type","application/json")
 	w.WriteHeader(status)
-	return json.NewEncoder(w).Encode(v)
+	return json.NewEncoder(w).Encode(toJSON)
 }
 
 type apiFunc func(http.ResponseWriter,*http.Request) error
@@ -61,13 +61,22 @@ func (s *APIServer) handleAccount(w http.ResponseWriter,r  *http.Request) error 
 }
 
 func (s *APIServer) handleGetAccount(w http.ResponseWriter,r  *http.Request) error {
-	account:=NewAccount("ABC","BCDDD")
-
-	return WriteJSON(w,http.StatusOK,account)
+	id := mux.Vars(r)["id"]
+	fmt.Println(id)
+	return WriteJSON(w,http.StatusOK,&Account{})
 }
 
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter,r  *http.Request) error {
-	return nil
+	createAccountRequest := new(CreateAccountRequest)
+	createAccountRequest.FirstName,createAccountRequest.LastName = mux.Vars(r)["FirstName"],mux.Vars(r)["LastName"]
+	if err := json.NewDecoder(r.Body).Decode(createAccountRequest);err !=nil{
+		return err
+	}
+	account := NewAccount(createAccountRequest.FirstName,createAccountRequest.LastName)
+	if err  := s.store.CreateAccount(account);err!=nil{
+		return err
+	}
+	return WriteJSON(w,http.StatusOK,account)
 }
 
 func (s *APIServer) handleDeleteAccount(w http.ResponseWriter,r  *http.Request) error {

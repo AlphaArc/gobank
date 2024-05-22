@@ -5,7 +5,7 @@ import "log"
 func main() {
 	store, err := newPGStore()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 	if err := store.Init(); err != nil{
 		log.Fatal(err)

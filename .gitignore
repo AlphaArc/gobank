@@ -41,3 +41,6 @@ go.work.sum# If you prefer the allow list template instead of the deny list, see
 # Go workspace file
 go.work
 go.work.sum
+
+# Ignore Data Folder
+data/
