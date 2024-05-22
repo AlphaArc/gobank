@@ -9,8 +9,8 @@ import (
 )
 
 func WriteJSON(w http.ResponseWriter,status int,v any)error{
+	w.Header().Add("Content-type","application/json")
 	w.WriteHeader(status)
-	w.Header().Set("Content-type","application/json")
 	return json.NewEncoder(w).Encode(v)
 }
 
@@ -30,11 +30,13 @@ func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc{
 
 type APIServer struct {
 	listenAdr string
+	store storage
 }
 
-func NewAPIServer(listenAddr string) *APIServer {
+func NewAPIServer(listenAddr string,store storage) *APIServer {
 	return &APIServer{
 		listenAdr: listenAddr,
+		store: store,
 	}
 }
 
