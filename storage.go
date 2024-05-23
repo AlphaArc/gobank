@@ -64,7 +64,7 @@ func (s *PostgresStore) createAccountTable() error{
 type storage interface {
 	CreateAccount(*Account) error
 	DeleteAccount(int) error
-	UpdateAccount(*Account) error
+	UpdateAccountByID(*UpdateAccountRequest) error
 	GetAccountByID(int) (*Account, error)
 	GetAllAccounts()([]*Account,error)
 }
@@ -90,8 +90,24 @@ func (s *PostgresStore) CreateAccount(acc *Account) error {
 }
 
 // UpdateAccount implements storage.
-func (s *PostgresStore) UpdateAccount(*Account) error {
+func (s *PostgresStore) UpdateAccountByID(acc *UpdateAccountRequest) error {
+	query := `
+	UPDATE account
+	SET first_name = $2, last_name= $3, number = $4, balance = $5
+	WHERE id = $1`
+	resp, err := s.db.Query(
+		query,
+		acc.ID,
+		acc.FirstName,
+		acc.LastName,
+		acc.Number,
+		acc.Balance,
+	);if err !=nil  {
+		return err
+	}
+	fmt.Printf("%+v\n",resp)
 	return nil
+
 }
 
 // DeleteAccount implements storage.
@@ -100,8 +116,24 @@ func (s *PostgresStore) DeleteAccount(int) error {
 }
 
 // GetAccountByID implements storage.
-func (s *PostgresStore) GetAccountByID(int) (*Account, error) {
-	return nil,nil
+func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
+	query := `SELECT 
+	id, 
+	first_name, 
+	last_name, 
+	"number", 
+	balance, 
+	created_at
+	FROM account
+	WHERE id = $1`
+	rows, err := s.db.Query(query,id);if err != nil{
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next(){
+        return ScanIntoAccount(rows)
+	}
+	return nil, fmt.Errorf("account with id = %d not found",id)
 }
 
 func (s *PostgresStore) GetAllAccounts()([]*Account,error){
@@ -119,19 +151,9 @@ func (s *PostgresStore) GetAllAccounts()([]*Account,error){
 	accounts := []*Account{}
 	for rows.Next(){
 		account := new(Account)
-		err := rows.Scan(
-			&account.ID,
-			&account.FirstName,
-			&account.LastName,
-			&account.Number,
-			&account.Balance,
-			&account.CreatedAt,
-		)
-		if err != nil {
-            // fmt.Printf("Error scanning row: %v\n", err)
-            return nil, fmt.Errorf("scan error: %v", err)
-        }
-		// fmt.Printf("Scanned Account: %+v\n", account)
+		account , err  = ScanIntoAccount(rows);if err !=nil{
+			return nil, err
+		}
         accounts = append(accounts, account)
 	}
 	if err = rows.Err(); err != nil {
@@ -139,4 +161,21 @@ func (s *PostgresStore) GetAllAccounts()([]*Account,error){
 		return nil, fmt.Errorf("rows iteration error: %v", err)
     }
 	return accounts, nil
+}
+
+func ScanIntoAccount(rows *sql.Rows)  (*Account, error){
+	account := new(Account)
+	err := rows.Scan(
+		&account.ID,
+		&account.FirstName,
+		&account.LastName,
+		&account.Number,
+		&account.Balance,
+		&account.CreatedAt,
+	)
+	if err != nil {
+		// fmt.Printf("Error scanning row: %v\n", err)
+		return nil, fmt.Errorf("scan error: %v", err)
+	}
+	return account, nil
 }

@@ -1,10 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"encoding/json"
+	"strconv"
 	"github.com/gorilla/mux"
 )
 
@@ -19,6 +20,10 @@ type apiFunc func(http.ResponseWriter,*http.Request) error
 type ApiError struct {
 	Error string
 }
+
+const  (
+	TimeLayout = "time.RFC3339Nano"
+)
 
 func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc{
 	return func(w http.ResponseWriter,r *http.Request)  {
@@ -64,8 +69,8 @@ func (s *APIServer) handleAccount(w http.ResponseWriter,r  *http.Request) error 
 func (s *APIServer) handleAccountByID(w http.ResponseWriter,r  *http.Request) error {
 	switch r.Method{
 		case "GET" :  return s.handleGetAccountByID(w,r)
-		case "POST" :  return s.handleCreateAccount(w,r)
-		case "DELETE" :  return s.handleDeleteAccount(w,r)
+		case "POST" :  return s.handleUpdateAccountByID(w,r)
+		case "DELETE" :  return s.handleDeleteAccountByID(w,r)
 	} 
 
 	return fmt.Errorf("method not allowed %s",r.Method)
@@ -85,28 +90,61 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter,r  *http.Request) 
 	if err := json.NewDecoder(r.Body).Decode(createAccountRequest);err !=nil{
 		return err
 	}
-	account := NewAccount(createAccountRequest.FirstName,createAccountRequest.LastName)
-	if err  := s.store.CreateAccount(account);err!=nil{
+	NewAccount := NewAccount(createAccountRequest.FirstName,createAccountRequest.LastName)
+	if err  := s.store.CreateAccount(NewAccount);err!=nil{
 		return err
 	}
-	return WriteJSON(w,http.StatusOK,account)
+	return WriteJSON(w,http.StatusOK,NewAccount)
 }
 
 func (s *APIServer) handleGetAccountByID(w  http.ResponseWriter,r *http.Request) error{
-	// var id string = mux.Vars(r)["id"]
-	// account,err :=  s.store.GetAccountByID(int(id))
-	// if err!=nil{
-	// 	return err
-	// }
+	idStr := mux.Vars(r)["id"]
+	id, err := strconv.Atoi(idStr);if err !=nil{
+		return err
+	}
+	AccountByID, err := s.store.GetAccountByID(id);if err !=nil{
+		return err
+	}
+	return WriteJSON(w,http.StatusOK,AccountByID)
+}
+
+func (s *APIServer) handleDeleteAccountByID(w http.ResponseWriter,r  *http.Request) error {
 	fmt.Println(r.Body)
 	acc := `"AVC":"123"`
 	return WriteJSON(w,http.StatusOK,acc)
 }
 
-func (s *APIServer) handleDeleteAccount(w http.ResponseWriter,r  *http.Request) error {
+func (s *APIServer) handleUpdateAccountByID(w http.ResponseWriter,r  *http.Request) error {
+	vars := mux.Vars(r)
+	fmt.Println(r.Method)
 	fmt.Println(r.Body)
-	acc := `"AVC":"123"`
-	return WriteJSON(w,http.StatusOK,acc)
+	// Check and parse ID
+	idStr, ok := vars["id"]
+	if !ok || idStr == "" {
+		return fmt.Errorf("missing or empty ID parameter ")
+	}
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return fmt.Errorf("invalid ID: %w", err)
+	}
+
+
+	updateAccountRequest := &UpdateAccountRequest{
+		ID: id, // Set the ID from the URL parameter
+	}
+
+	
+	if err := json.NewDecoder(r.Body).Decode(updateAccountRequest);err !=nil{
+		return err
+	}
+
+	fmt.Println(r.Body)
+	fmt.Println(updateAccountRequest)
+
+	err = s.store.UpdateAccountByID(updateAccountRequest);if err !=nil{
+		return err
+	}
+	return WriteJSON(w,http.StatusOK,updateAccountRequest)
 }
 
 // func (s *APIServer) handleTransfer(w http.ResponseWriter,r  *http.Request) error {
